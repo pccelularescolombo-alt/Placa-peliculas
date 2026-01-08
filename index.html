@@ -5,10 +5,12 @@
 <title>Consulta 10x10 Ajuste Profissional</title>
 
 <style>
+
 body{
   font-family: Arial, Helvetica, sans-serif;
   background:#eee;
   margin:0;
+  min-height:100vh;
 }
 
 /* ===== TOPO FIXO ===== */
@@ -43,12 +45,16 @@ body{
 /* ===== ÁREA DA IMAGEM ===== */
 .area-canvas{
   text-align:center;
-  padding:30px 20px;
+  padding:40px 20px;
+  margin-top:20px;
 }
 
 canvas{
   margin-top:20px;
+  max-width:100%;
+  height:auto;
 }
+
 </style>
 </head>
 
@@ -67,6 +73,8 @@ canvas{
 </div>
 
 <script>
+const canvas = document.getElementById("canvas");
+
 const cores = {
   samsung:{ fundo:"#1428a0", texto:"#fff" },
   motorola:{ fundo:"#001526", texto:"#fff" },
@@ -279,13 +287,12 @@ function buscar(){
   const termo = norm(document.getElementById("busca").value);
   const achado = dados.find(d =>
     norm(d.modelo).includes(termo) ||
-    d.adaptacoes.some(a=>norm(a).includes(termo))
+    d.adaptacoes.some(a => norm(a).includes(termo))
   );
-  if(!achado) return;
-  gerarImagem(achado);
+  if(achado) gerarImagem(achado);
 }
 
-/* ===== FUNÇÃO RETÂNGULO ARREDONDADO ===== */
+/* ===== RETÂNGULO ARREDONDADO ===== */
 function roundRect(ctx, x, y, w, h, r){
   ctx.beginPath();
   ctx.moveTo(x+r, y);
@@ -301,15 +308,17 @@ function roundRect(ctx, x, y, w, h, r){
 }
 
 function gerarImagem(d){
+  const ctx = canvas.getContext("2d");
   const c = canvas;
-  const ctx = c.getContext("2d");
-  const est = cores[d.marca.toLowerCase()] || {fundo:"#fff",texto:"#000"};
+  const est = cores[d.marca.toLowerCase()] || {fundo:"#fff", texto:"#000"};
+
+  ctx.clearRect(0,0,c.width,c.height);
 
   /* FUNDO */
   ctx.fillStyle = est.fundo;
   ctx.fillRect(0,0,c.width,c.height);
 
-  /* BORDAS */
+  /* BORDAS COLORIDAS */
   const b = 25;
   ctx.fillStyle="#0051ff";
   ctx.fillRect(0,0,c.width,b);
@@ -320,24 +329,16 @@ function gerarImagem(d){
 
   ctx.textAlign="center";
   ctx.fillStyle=est.texto;
-  ctx.textBaseline = "middle";
+  ctx.textBaseline="middle";
 
-let y = b + 30; // sobe a logo
+  let y = b + 30;
 
-/* ===== CAIXA DA LOGO ===== */
-const logo = new Image();
-logo.src = `logo/${d.marca.toLowerCase()}.png`;
+  /* ===== CAIXA DA LOGO ===== */
+  const boxW = c.width * 0.8;
+  const boxH = 140;
+  const boxX = (c.width - boxW) / 2;
+  const boxY = y;
 
-logo.onload = () => {
-  desenharLogo();
-};
-
-logo.onerror = () => {
-  console.warn("Logo não encontrada:", logo.src);
-};
-
-function desenharLogo(){
-  /* Caixa */
   ctx.shadowColor="rgba(0,0,0,0.35)";
   ctx.shadowBlur=18;
   ctx.shadowOffsetY=8;
@@ -348,77 +349,78 @@ function desenharLogo(){
 
   ctx.shadowColor="transparent";
 
-  /* Imagem */
-  const margem = 40;
-  const maxW = boxW - margem * 2;
-  const escala = maxW / logo.width;
-  const imgW = logo.width * escala;
-  const imgH = logo.height * escala;
+  const logo = new Image();
+  logo.src = `logo/${d.marca.toLowerCase()}.png`;
 
-  ctx.drawImage(
-    logo,
-    boxX + (boxW - imgW) / 2,
-    boxY + (boxH - imgH) / 2,
-    imgW,
-    imgH
-  );
-}
+  logo.onload = () => {
+    const margem = 40;
+    const maxW = boxW - margem * 2;
+    const escala = maxW / logo.width;
+    const imgW = logo.width * escala;
+    const imgH = logo.height * escala;
 
-  /* ===== TÍTULO (SOMENTE MODELO) ===== */
-  let titulo = d.modelo;
+    ctx.drawImage(
+      logo,
+      boxX + (boxW - imgW) / 2,
+      boxY + (boxH - imgH) / 2,
+      imgW,
+      imgH
+    );
+  };
+
+  y += boxH + 60;
+
+  /* ===== MODELO ===== */
   let tamanho = 130;
   do{
     ctx.font = `bold ${tamanho}px Arial`;
     tamanho--;
-  }while(ctx.measureText(titulo).width > c.width - 120);
+  }while(ctx.measureText(d.modelo).width > c.width - 120);
 
-  ctx.fillText(titulo,c.width/2,y);
+  ctx.fillText(d.modelo, c.width/2, y);
 
-  y+=140;
+  y += 140;
 
+  /* ===== TÍTULO ===== */
   ctx.font="bold 60px Arial";
-  ctx.fillText("Adaptações:",c.width/2,y);
+  ctx.fillText("Adaptações:", c.width/2, y);
 
-  y+=80;
+  y += 80;
 
-/* ===== ADAPTAÇÕES – AJUSTE CORRETO ===== */
+  /* ===== ADAPTAÇÕES – AJUSTE CORRETO ===== */
+  const areaTopo = y;
+  const areaBase = c.height - b - 20;
+  const areaAltura = areaBase - areaTopo;
 
-const areaTopo = y;
-const areaBase = c.height - b - 20;
-const areaAltura = areaBase - areaTopo;
+  let fonte = 56;
+  let linhasPorCol = 1;
+  let colunas = 1;
+  let linhaAltura;
 
-let fonte = 56;
-let linhasPorCol;
-let colunas;
-let linhaAltura;
+  do{
+    fonte--;
+    linhaAltura = fonte * 1.4;
+    linhasPorCol = Math.max(1, Math.floor(areaAltura / linhaAltura));
+    colunas = Math.ceil(d.adaptacoes.length / linhasPorCol);
+  }while(colunas > 3 && fonte > 34);
 
-do {
-  fonte--;
-  linhaAltura = fonte * 1.4;
-  linhasPorCol = Math.floor(areaAltura / linhaAltura);
-  colunas = Math.ceil(d.adaptacoes.length / linhasPorCol);
-} while (
-  (linhasPorCol * colunas < d.adaptacoes.length || colunas > 3) &&
-  fonte > 34
-);
+  ctx.font = `${fonte}px Arial`;
 
-ctx.font = `${fonte}px Arial`;
-ctx.textBaseline = "middle";
+  const gap = 40;
+  const larguraCol = (c.width - 120 - gap * (colunas - 1)) / colunas;
+  const inicioX =
+    (c.width - (larguraCol * colunas + gap * (colunas - 1))) / 2;
 
-const gap = 40;
-const larguraCol = (c.width - 120 - gap * (colunas - 1)) / colunas;
-const inicioX =
-  (c.width - (larguraCol * colunas + gap * (colunas - 1))) / 2;
+  d.adaptacoes.forEach((texto, i) => {
+    const col = Math.floor(i / linhasPorCol);
+    const lin = i % linhasPorCol;
 
-d.adaptacoes.forEach((texto, i) => {
-  const col = Math.floor(i / linhasPorCol);
-  const lin = i % linhasPorCol;
+    const x = inicioX + col * (larguraCol + gap) + larguraCol / 2;
+    const yTexto = areaTopo + lin * linhaAltura + linhaAltura / 2;
 
-  const x = inicioX + col * (larguraCol + gap) + larguraCol / 2;
-  const yTexto = areaTopo + lin * linhaAltura + linhaAltura / 2;
-
-  ctx.fillText(texto, x, yTexto);
-});
+    ctx.fillText(texto, x, yTexto);
+  });
+}
 
 function baixar(){
   const a = document.createElement("a");
@@ -426,6 +428,7 @@ function baixar(){
   a.href=canvas.toDataURL("image/png");
   a.click();
 }
+
 </script>
 </body>
 </html>
