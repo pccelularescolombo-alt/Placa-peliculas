@@ -281,6 +281,18 @@ const dados = [
 
 ];
 
+const dados = [{
+  marca:"Samsung",
+  modelo:"A02",
+  adaptacoes:[
+    "Samsung A02S","Samsung A03","Samsung A03S","Samsung A03 Core",
+    "Samsung A04","Samsung A04S","Samsung A04E","Samsung A12",
+    "Samsung M23","Samsung A70",
+    "Motorola E7","Motorola E7 Power",
+    "Xiaomi 9A","Xiaomi 9A Sport","Xiaomi 9i","Xiaomi 9C"
+  ]
+}];
+
 const norm = t => t.toLowerCase().replace(/\s+/g,"");
 
 function buscar(){
@@ -318,7 +330,7 @@ function gerarImagem(d){
   ctx.fillStyle = est.fundo;
   ctx.fillRect(0,0,c.width,c.height);
 
-  /* BORDAS COLORIDAS */
+  /* BORDAS */
   const b = 25;
   ctx.fillStyle="#0051ff";
   ctx.fillRect(0,0,c.width,b);
@@ -329,13 +341,13 @@ function gerarImagem(d){
 
   ctx.textAlign="center";
   ctx.fillStyle=est.texto;
-  ctx.textBaseline="middle";
+  ctx.textBaseline="alphabetic";
 
-  let y = b + 30;
+  let y = b + 40;
 
-  /* ===== CAIXA DA LOGO ===== */
-  const boxW = c.width * 0.8;
-  const boxH = 140;
+  /* ===== CAIXA DA LOGO (VERSÃO QUE FUNCIONAVA) ===== */
+  const boxW = 420;
+  const boxH = 130;
   const boxX = (c.width - boxW) / 2;
   const boxY = y;
 
@@ -353,11 +365,8 @@ function gerarImagem(d){
   logo.src = `logo/${d.marca.toLowerCase()}.png`;
 
   logo.onload = () => {
-    const margem = 40;
-    const maxW = boxW - margem * 2;
-    const escala = maxW / logo.width;
-    const imgW = logo.width * escala;
-    const imgH = logo.height * escala;
+    const imgW = boxW - 80;   // margem fixa (FUNCIONA)
+    const imgH = logo.height * (imgW / logo.width);
 
     ctx.drawImage(
       logo,
@@ -368,7 +377,7 @@ function gerarImagem(d){
     );
   };
 
-  y += boxH + 60;
+  y += boxH + 80;
 
   /* ===== MODELO ===== */
   let tamanho = 130;
@@ -387,38 +396,29 @@ function gerarImagem(d){
 
   y += 80;
 
-  /* ===== ADAPTAÇÕES – AJUSTE CORRETO ===== */
-  const areaTopo = y;
-  const areaBase = c.height - b - 20;
-  const areaAltura = areaBase - areaTopo;
-
-  let fonte = 56;
-  let linhasPorCol = 1;
-  let colunas = 1;
-  let linhaAltura;
+  /* ===== ADAPTAÇÕES (LÓGICA ESTÁVEL) ===== */
+  let fonte = 54;
+  const areaAltura = c.height - y - b - 20;
+  let linhasPorCol;
 
   do{
     fonte--;
-    linhaAltura = fonte * 1.4;
-    linhasPorCol = Math.max(1, Math.floor(areaAltura / linhaAltura));
-    colunas = Math.ceil(d.adaptacoes.length / linhasPorCol);
-  }while(colunas > 3 && fonte > 34);
+    linhasPorCol = Math.floor(areaAltura / (fonte + 16));
+  }while(linhasPorCol * 3 < d.adaptacoes.length && fonte > 36);
 
   ctx.font = `${fonte}px Arial`;
 
+  const colunas = Math.ceil(d.adaptacoes.length / linhasPorCol);
   const gap = 40;
-  const larguraCol = (c.width - 120 - gap * (colunas - 1)) / colunas;
-  const inicioX =
-    (c.width - (larguraCol * colunas + gap * (colunas - 1))) / 2;
+  const largura = (c.width - 120 - gap*(colunas-1)) / colunas;
+  const inicioX = (c.width - ((largura*colunas)+(gap*(colunas-1)))) / 2;
 
-  d.adaptacoes.forEach((texto, i) => {
+  d.adaptacoes.forEach((t,i)=>{
     const col = Math.floor(i / linhasPorCol);
     const lin = i % linhasPorCol;
-
-    const x = inicioX + col * (larguraCol + gap) + larguraCol / 2;
-    const yTexto = areaTopo + lin * linhaAltura + linhaAltura / 2;
-
-    ctx.fillText(texto, x, yTexto);
+    const x = inicioX + col*(largura+gap) + largura/2;
+    const yy = y + lin*(fonte+16);
+    ctx.fillText(t, x, yy);
   });
 }
 
