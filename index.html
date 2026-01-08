@@ -28,18 +28,51 @@ body{
   margin:0 0 15px 0;
 }
 
-.topo-fixo input{
-  padding:10px;
-  width:380px;
-  font-size:16px;
-  max-width:90%;
+/* ===== CONTAINER DOS SELECTS E BOTÕES ===== */
+.select-container{
+  display:flex;
+  justify-content:center;
+  gap:15px;
+  flex-wrap:wrap;
+  margin-top:10px;
 }
 
-.topo-fixo button{
-  padding:10px 18px;
-  margin:8px 4px 0 4px;
-  font-size:15px;
+/* ===== ESTILO DOS QUADRADOS ===== */
+.select-container select,
+.select-container button{
+  padding:15px 20px;
+  font-size:16px;
+  border-radius:12px;
+  border:none;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
   cursor:pointer;
+  transition: transform 0.1s, box-shadow 0.2s;
+  min-width:180px;
+  background:#fff;
+}
+
+.select-container select:focus,
+.select-container button:focus{
+  outline:none;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.35);
+}
+
+.select-container select:hover,
+.select-container button:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+}
+
+.select-container button.gerar{
+  background:#0051ff;
+  color:#fff;
+  font-weight:bold;
+}
+
+.select-container button.download{
+  background:#28a745;
+  color:#fff;
+  font-weight:bold;
 }
 
 /* ===== ÁREA DA IMAGEM ===== */
@@ -62,10 +95,35 @@ canvas{
 
 <div class="topo-fixo">
   <h2>Consulta de Adaptações – 10×10 cm</h2>
-  <input id="busca" placeholder="Ex: A02, A30, Samsung A20">
-  <br>
-  <button onclick="buscar()">Buscar</button>
-  <button onclick="baixar()">Baixar PNG</button>
+
+  <div class="select-container">
+    <!-- FABRICANTE -->
+    <select id="fabricante">
+      <option value="">Selecione a fabricante</option>
+      <option value="Samsung">Samsung</option>
+      <option value="Motorola">Motorola</option>
+      <option value="Xiaomi">Xiaomi</option>
+      <option value="Apple">Apple</option>
+      <option value="Infinix">Infinix</option>
+      <option value="Realme">Realme</option>
+      <option value="Asus">Asus</option>
+      <option value="Nokia">Nokia</option>
+      <option value="Itel">Itel</option>
+      <option value="Tecno">Tecno</option>
+      <option value="Oscar">Oscar</option>
+    </select>
+
+    <!-- MODELO -->
+    <select id="modelo">
+      <option value="">Selecione o modelo</option>
+    </select>
+
+    <!-- BOTÃO GERAR -->
+    <button class="gerar" onclick="buscarSelecionado()">Gerar Imagem</button>
+
+    <!-- BOTÃO DOWNLOAD -->
+    <button class="download" onclick="baixar()">Baixar PNG</button>
+  </div>
 </div>
 
 <div class="area-canvas">
@@ -73,7 +131,6 @@ canvas{
 </div>
 
 <script>
-
 const canvas = document.getElementById("canvas");
 
 const cores = {
@@ -92,6 +149,7 @@ const cores = {
   tecno:   { fundo:"#0064fe", texto:"#ffffff" }
 };
 
+// ===== DADOS (SEU ARRAY COMPLETO) =====
 const dados = [
 
 /* ================= SAMSUNG ================= */
@@ -291,18 +349,44 @@ const dados = [
 
 ];
 
+// ===== NORMALIZAÇÃO =====
 const norm = t => t.toLowerCase().replace(/\s+/g,"");
 
-function buscar(){
-  const termo = norm(document.getElementById("busca").value);
-  const achado = dados.find(d =>
-    norm(d.modelo).includes(termo) ||
-    d.adaptacoes.some(a => norm(a).includes(termo))
-  );
-  if(achado) gerarImagem(achado);
+// ===== POPULA MODELOS AO SELECIONAR FABRICANTE =====
+const fabricanteSelect = document.getElementById("fabricante");
+const modeloSelect = document.getElementById("modelo");
+
+fabricanteSelect.addEventListener("change", () => {
+  const marca = fabricanteSelect.value;
+  modeloSelect.innerHTML = `<option value="">Selecione o modelo</option>`;
+  const modelos = dados.filter(d => d.marca === marca).map(d => d.modelo);
+  modelos.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = m;
+    modeloSelect.appendChild(opt);
+  });
+});
+
+// ===== BUSCA COM BASE NOS SELECTS =====
+function buscarSelecionado(){
+  const marca = fabricanteSelect.value;
+  const modelo = modeloSelect.value;
+
+  if(!marca || !modelo){
+    alert("Selecione a fabricante e o modelo!");
+    return;
+  }
+
+  const achado = dados.find(d => d.marca === marca && d.modelo === modelo);
+  if(achado){
+    gerarImagem(achado);
+  } else {
+    alert("Modelo não encontrado!");
+  }
 }
 
-/* ===== RETÂNGULO ARREDONDADO ===== */
+// ===== FUNÇÕES DE DESENHO DE IMAGEM =====
 function roundRect(ctx, x, y, w, h, r){
   ctx.beginPath();
   ctx.moveTo(x+r, y);
@@ -318,17 +402,17 @@ function roundRect(ctx, x, y, w, h, r){
 }
 
 function gerarImagem(d){
-  const ctx = canvas.getContext("2d");
   const c = canvas;
+  const ctx = c.getContext("2d");
   const est = cores[d.marca.toLowerCase()] || {fundo:"#fff", texto:"#000"};
 
   ctx.clearRect(0,0,c.width,c.height);
 
-  /* FUNDO */
+  // FUNDO
   ctx.fillStyle = est.fundo;
   ctx.fillRect(0,0,c.width,c.height);
 
-  /* BORDAS */
+  // BORDAS
   const b = 25;
   ctx.fillStyle="#0051ff";
   ctx.fillRect(0,0,c.width,b);
@@ -341,9 +425,10 @@ function gerarImagem(d){
   ctx.fillStyle=est.texto;
   ctx.textBaseline="alphabetic";
 
+  // CONTROLE VERTICAL
   let y = b + 40;
 
-  /* ===== CAIXA DA LOGO (VERSÃO QUE FUNCIONAVA) ===== */
+  // CAIXA DA LOGO
   const boxW = 420;
   const boxH = 130;
   const boxX = (c.width - boxW) / 2;
@@ -363,7 +448,7 @@ function gerarImagem(d){
   logo.src = `logo/${d.marca.toLowerCase()}.png`;
 
   logo.onload = () => {
-    const imgW = boxW - 80;   // margem fixa (FUNCIONA)
+    const imgW = boxW - 80;
     const imgH = logo.height * (imgW / logo.width);
 
     ctx.drawImage(
@@ -375,26 +460,26 @@ function gerarImagem(d){
     );
   };
 
-  y += boxH + 80;
+  y = boxY + boxH + 100;
 
-  /* ===== MODELO ===== */
+  // MODELO
   let tamanho = 130;
   do{
     ctx.font = `bold ${tamanho}px Arial`;
     tamanho--;
   }while(ctx.measureText(d.modelo).width > c.width - 120);
 
-  ctx.fillText(d.modelo, c.width/2, y);
+  ctx.fillText(d.modelo, c.width / 2, y);
 
   y += 140;
 
-  /* ===== TÍTULO ===== */
-  ctx.font="bold 60px Arial";
-  ctx.fillText("Adaptações:", c.width/2, y);
+  // TÍTULO
+  ctx.font = "bold 60px Arial";
+  ctx.fillText("Adaptações:", c.width / 2, y);
 
   y += 80;
 
-  /* ===== ADAPTAÇÕES (LÓGICA ESTÁVEL) ===== */
+  // ADAPTAÇÕES
   let fonte = 54;
   const areaAltura = c.height - y - b - 20;
   let linhasPorCol;
@@ -408,22 +493,24 @@ function gerarImagem(d){
 
   const colunas = Math.ceil(d.adaptacoes.length / linhasPorCol);
   const gap = 40;
-  const largura = (c.width - 120 - gap*(colunas-1)) / colunas;
-  const inicioX = (c.width - ((largura*colunas)+(gap*(colunas-1)))) / 2;
+  const largura = (c.width - 120 - gap * (colunas - 1)) / colunas;
+  const inicioX =
+    (c.width - ((largura * colunas) + (gap * (colunas - 1)))) / 2;
 
-  d.adaptacoes.forEach((t,i)=>{
+  d.adaptacoes.forEach((t, i) => {
     const col = Math.floor(i / linhasPorCol);
     const lin = i % linhasPorCol;
-    const x = inicioX + col*(largura+gap) + largura/2;
-    const yy = y + lin*(fonte+16);
+    const x = inicioX + col * (largura + gap) + largura / 2;
+    const yy = y + lin * (fonte + 16);
     ctx.fillText(t, x, yy);
   });
 }
 
+// ===== FUNÇÃO DE DOWNLOAD =====
 function baixar(){
   const a = document.createElement("a");
-  a.download="consulta_10x10.png";
-  a.href=canvas.toDataURL("image/png");
+  a.download = "consulta_10x10.png";
+  a.href = canvas.toDataURL("image/png");
   a.click();
 }
 
