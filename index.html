@@ -641,8 +641,18 @@ function gerarImagem(d){
 
 // ===== FUNÇÃO DE DOWNLOAD =====
 function baixar(){
+  const fabricante = document.getElementById("fabricante").value;
+  const modelo = document.getElementById("modelo").value;
+
+  if(!fabricante || !modelo){
+    alert("Selecione a fabricante e o modelo antes de baixar!");
+    return;
+  }
+
+  const nomeArquivo = `${fabricante} ${modelo}.png`;
+
   const a = document.createElement("a");
-  a.download = "consulta_10x10.png";
+  a.download = nomeArquivo;
   a.href = canvas.toDataURL("image/png");
   a.click();
 }
