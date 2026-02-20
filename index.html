@@ -560,6 +560,7 @@ function gerarImagem(d){
   ctx.fill();
 
   ctx.shadowColor="transparent";
+  ctx.fillStyle = est.texto;
 
   const logo = new Image();
   logo.src = `logo/${d.marca.toLowerCase()}.png`;
